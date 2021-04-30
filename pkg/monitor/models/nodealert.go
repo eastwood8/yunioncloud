@@ -35,6 +35,7 @@ import (
 	"yunion.io/x/onecloud/pkg/mcclient/modules"
 	merrors "yunion.io/x/onecloud/pkg/monitor/errors"
 	"yunion.io/x/onecloud/pkg/monitor/options"
+	"yunion.io/x/onecloud/pkg/util/rbacutils"
 	"yunion.io/x/onecloud/pkg/util/stringutils2"
 )
 
@@ -118,7 +119,7 @@ func (man *SNodeAlertManager) ValidateCreateData(
 		return nil, err
 	}
 	data.NodeName = nodeName
-	name, err := man.genName(ownerId, resType, nodeName, data.Metric)
+	name, err := man.genName(ctx, ownerId, resType, nodeName, data.Metric)
 	if err != nil {
 		return nil, err
 	}
@@ -131,9 +132,9 @@ func (man *SNodeAlertManager) ValidateCreateData(
 	return &data, nil
 }
 
-func (man *SNodeAlertManager) genName(ownerId mcclient.IIdentityProvider, resType string, nodeName string, metric string) (string, error) {
+func (man *SNodeAlertManager) genName(ctx context.Context, ownerId mcclient.IIdentityProvider, resType string, nodeName string, metric string) (string, error) {
 	nameHint := fmt.Sprintf("%s %s %s", resType, nodeName, metric)
-	name, err := db.GenerateName(man, ownerId, nameHint)
+	name, err := db.GenerateName(ctx, man, ownerId, nameHint)
 	if err != nil {
 		return "", err
 	}
@@ -786,7 +787,7 @@ func (alert *SNodeAlert) ValidateUpdateData(
 
 	name := alert.Name
 	if nameChange {
-		name, err = NodeAlertManager.genName(userCred, resType, details.NodeName, details.Metric)
+		name, err = NodeAlertManager.genName(ctx, userCred, resType, details.NodeName, details.Metric)
 		if err != nil {
 			return input, err
 		}
@@ -846,4 +847,9 @@ func (alert *SNodeAlert) CustomizeDelete(
 	ctx context.Context, userCred mcclient.TokenCredential,
 	query jsonutils.JSONObject, data jsonutils.JSONObject) error {
 	return alert.SV1Alert.CustomizeDelete(ctx, userCred, query, data)
+}
+
+func (m *SNodeAlertManager) FilterByOwner(q *sqlchemy.SQuery, userCred mcclient.IIdentityProvider, scope rbacutils.TRbacScope) *sqlchemy.SQuery {
+
+	return q
 }

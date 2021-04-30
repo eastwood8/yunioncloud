@@ -342,7 +342,7 @@ func (self *SManagedVirtualizationRegionDriver) RequestRemoteUpdateLoadbalancer(
 			return nil, errors.Wrapf(err, "lb.GetAllUserMetadata")
 		}
 		tagsUpdateInfo := cloudprovider.TagsUpdateInfo{OldTags: oldTags, NewTags: tags}
-		err = iLoadbalancer.SetTags(tags, replaceTags)
+		err = cloudprovider.SetTags(ctx, iLoadbalancer, lb.ManagerId, tags, replaceTags)
 		if err != nil {
 			if errors.Cause(err) == cloudprovider.ErrNotSupported || errors.Cause(err) == cloudprovider.ErrNotImplemented {
 				return nil, nil
@@ -1234,15 +1234,16 @@ func (self *SManagedVirtualizationRegionDriver) RequestCreateVpc(ctx context.Con
 			}
 		}
 
+		err = vpc.SyncRemoteWires(ctx, userCred)
+		if err != nil {
+			return nil, errors.Wrap(err, "vpc.SyncRemoteWires")
+		}
+
 		err = vpc.SyncWithCloudVpc(ctx, userCred, ivpc, nil)
 		if err != nil {
 			return nil, errors.Wrap(err, "vpc.SyncWithCloudVpc")
 		}
 
-		err = vpc.SyncRemoteWires(ctx, userCred)
-		if err != nil {
-			return nil, errors.Wrap(err, "vpc.SyncRemoteWires")
-		}
 		return nil, nil
 	})
 	return nil
@@ -1904,8 +1905,8 @@ func (self *SManagedVirtualizationRegionDriver) RequestSyncElasticcache(ctx cont
 		return errors.Wrap(fmt.Errorf("provider is nil"), "managedVirtualizationRegionDriver.RequestSyncElasticcache.GetCloudprovider")
 	}
 
-	lockman.LockClass(ctx, models.ElasticcacheManager, db.GetLockClassKey(models.ElasticcacheManager, provider.GetOwnerId()))
-	defer lockman.ReleaseClass(ctx, models.ElasticcacheManager, db.GetLockClassKey(models.ElasticcacheManager, provider.GetOwnerId()))
+	lockman.LockRawObject(ctx, "elastic-cache", ec.Id)
+	defer lockman.ReleaseRawObject(ctx, "elastic-cache", ec.Id)
 
 	err = ec.SyncWithCloudElasticcache(ctx, userCred, provider, iec)
 	if err != nil {
@@ -2526,7 +2527,7 @@ func (self *SManagedVirtualizationRegionDriver) RequestRemoteUpdateDBInstance(ct
 			return nil, errors.Wrapf(err, "instance.GetAllUserMetadata")
 		}
 		tagsUpdateInfo := cloudprovider.TagsUpdateInfo{OldTags: oldTags, NewTags: tags}
-		err = iRds.SetTags(tags, replaceTags)
+		err = cloudprovider.SetTags(ctx, iRds, instance.ManagerId, tags, replaceTags)
 		if err != nil {
 			if errors.Cause(err) == cloudprovider.ErrNotSupported || errors.Cause(err) == cloudprovider.ErrNotImplemented {
 				return nil, nil
@@ -2935,7 +2936,11 @@ func (self *SManagedVirtualizationRegionDriver) RequestRemoteUpdateElasticcache(
 			return nil, errors.Wrapf(err, "GetAllUserMetadata")
 		}
 		tagsUpdateInfo := cloudprovider.TagsUpdateInfo{OldTags: oldTags, NewTags: tags}
-		err = iElasticcache.SetTags(tags, replaceTags)
+		mangerId := ""
+		if vpc := elasticcache.GetVpc(); vpc != nil {
+			mangerId = vpc.ManagerId
+		}
+		err = cloudprovider.SetTags(ctx, iElasticcache, mangerId, tags, replaceTags)
 		if err != nil {
 			if errors.Cause(err) == cloudprovider.ErrNotSupported || errors.Cause(err) == cloudprovider.ErrNotImplemented {
 				return nil, nil

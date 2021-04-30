@@ -93,7 +93,7 @@ func (man *SAlertDashBoardManager) ValidateCreateData(
 		return data, httperrors.NewInputParameterError("Invalid refresh format: %s", data.Refresh)
 	}
 
-	generateName, err := db.GenerateName(man, ownerId, data.Name)
+	generateName, err := db.GenerateName(ctx, man, ownerId, data.Name)
 	if err != nil {
 		return data, err
 	}
@@ -107,7 +107,8 @@ func (dash *SAlertDashBoard) CustomizeCreate(
 	query jsonutils.JSONObject,
 	data jsonutils.JSONObject,
 ) error {
-	return dash.SScopedResourceBase.CustomizeCreate(ctx, userCred, ownerId, query, data)
+	//return dash.SScopedResourceBase.CustomizeCreate(ctx, userCred, ownerId, query, data)
+	return nil
 }
 
 func (dash *SAlertDashBoard) PostCreate(ctx context.Context,
@@ -204,6 +205,7 @@ func (dash *SAlertDashBoard) getAttachPanels() ([]SAlertPanel, error) {
 	sq := AlertDashBoardPanelManager.Query(AlertDashBoardPanelManager.GetSlaveFieldName()).Equals(
 		AlertDashBoardPanelManager.GetMasterFieldName(), dash.Id).SubQuery()
 	panelQuery = panelQuery.In("id", sq)
+	panelQuery = panelQuery.Desc("created_at")
 	err := db.FetchModelObjects(AlertPanelManager, panelQuery, &panels)
 	if err != nil {
 		return panels, errors.Wrapf(err, "dashboard:%s get attach panels error", dash.Name)

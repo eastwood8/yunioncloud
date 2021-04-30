@@ -30,6 +30,8 @@ type ProxyEndpointCreateInput struct {
 }
 
 type ProxyEndpointCreateFromServerInput struct {
+	Name string
+
 	ServerId string
 }
 
@@ -43,7 +45,7 @@ type ProxyEndpointUpdateInput struct {
 }
 
 type ProxyEndpointListInput struct {
-	apis.VirtualResourceBaseUpdateInput
+	apis.VirtualResourceListInput
 
 	VpcId     string
 	NetworkId string
